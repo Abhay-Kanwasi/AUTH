@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from account.serializers import UserRegistrationSerializer, UserLoginSerializer, ProfileSerializer, \
-    ChangePasswordSerializer
+    ChangePasswordSerializer, SendPasswordResetEmailSerializer, ResetPasswordEmailViewSerializer
 from account.renderers import JSONRenderer
 
 
@@ -44,9 +44,8 @@ class UserLoginView(APIView):
             user = authenticate(request, email=email, password=password)
             if user is not None:
                 token = get_tokens_for_user(user)
-                return Response({'token': token, 'success': 'login successful'}, status=status.HTTP_200_OK)
-            return Response({'errors': {'non_field_errors': ['Email or Password is not valid']}},
-                            status=status.HTTP_404_NOT_FOUND)
+                return Response({'success': 'login successful', 'token': token}, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserProfileView(APIView):
@@ -68,3 +67,25 @@ class UserChangePasswordView(APIView):
         if serializer.is_valid(raise_exception=True):
             return Response({'success': 'Password changed successfully'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SendPasswordResetEmailView(APIView):
+    renderer_classes = [JSONRenderer]
+
+    def post(self, request, format=None):
+        serializer = SendPasswordResetEmailSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            return Response({'success': 'Password reset link send to your email. Please check your email'},
+                            status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResetPasswordEmailView(APIView):
+    renderer_classes = [JSONRenderer]
+
+    def post(self, request, uid, token, format=None):
+        serializer = ResetPasswordEmailViewSerializer(data=request.data, context={'uid': uid, 'token': token})
+        if serializer.is_valid(raise_exception=True):
+            return Response({'success': 'Password reset link send to your email. Please check your email'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
